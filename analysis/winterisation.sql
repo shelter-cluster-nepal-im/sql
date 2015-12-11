@@ -10,7 +10,7 @@ alter table winterisation add column target_hh float;
 alter table winterisation add column in_db boolean;
 alter table winterisation add column map_cd float;
 alter table winterisation add column census_hh_dmg float; 
-
+alter table winterisation add column hh_above_1500 float;
 --data cleaning
 update winterisation set target_hh = null where target_hh = 0;
 
@@ -25,10 +25,18 @@ update winterisation set num_hh_damage = d.tot_dmg_cnt
 from vdc_damage d
 where winterisation.hlcit_code = d.hlcit_code;
 
+-- update hh_above_1500 column 1> hh count above 1500m
+update winterisation set hh_above_1500 = s.sumhh from
+(
+	SELECT "HLCIT_CODE_VDC",SUM("HOUSEHOLD" :: int) as sumhh from "pop_hh_ward"
+	where elevation_above_1500m LIKE '1'
+	group by 1
+)s
+where winterisation.hlcit_code = s."HLCIT_CODE_VDC";
 --add target counts through group by of winter_db
 update winterisation set target_hh = s.sum from
 (
-	select vdc_code, sum(target_hh) from winterisation_db 
+	select vdc_code, SUM(target_hh::float) from winterisation_db 
 	group by 1
 )s
 where winterisation.hlcit_code = s.vdc_code;
